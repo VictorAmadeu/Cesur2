@@ -1,0 +1,158 @@
+ion-card {
+  border-radius: 24px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  height: 100%;
+}
+
+ion-list{
+  padding: 0;
+  margin: 0;
+}
+ion-item {
+  padding: 0;
+  margin: 0;
+}
+
+.title {
+  color: #1357ab
+}
+
+.notas {
+  color: rgb(177, 46, 46)
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.comensal-list dt {
+  font-weight: bold;
+  padding: 0;
+  margin: 0;
+}
+
+.comensal-list dd {
+  margin: 0 0 0 0;
+
+  /*
+    Antes:
+    - white-space: nowrap;      => obligaba a 1 sola línea
+    - overflow: hidden;         => ocultaba el texto que se desbordaba
+    - text-overflow: ellipsis;  => añadía "..." al final
+
+    Objetivo (producción-safe):
+    - Mostrar el texto completo del cliente permitiendo salto de línea
+    - Evitar truncado con "..."
+    - Si hay palabras/tokens muy largos sin espacios, permitir que corten para no romper el layout
+  */
+  white-space: normal;      /* permite varias líneas */
+  overflow: visible;        /* no oculta el contenido */
+  text-overflow: unset;     /* elimina el comportamiento de "..." */
+  overflow-wrap: anywhere;  /* corta tokens largos si no hay espacios */
+
+  max-width: 100%;
+}
+
+.comensal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.comensal-grid dl {
+  margin: 0;
+}
+
+.comensal-grid dt {
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.comensal-grid dd {
+  margin: 0;
+  border-bottom: 1px dotted #ccc;
+  width: 100%;
+}
+
+ion-fab-button{
+  --background: #1357ab;
+  --color: white;
+}
+
+ion-fab {
+  display: flex;
+  flex-direction: column; /* para que el FAB principal quede arriba si quieres */
+  align-items: flex-end;          /* los botones alineados a la derecha */
+  gap: 12px;                      /* espacio entre cada FAB */
+}
+
+ion-fab .additional-buttons {
+  display: flex;
+  flex-direction: column-reverse; /* para que el primero quede arriba */
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.fab-container {
+  position: relative;
+}
+
+.fab-menu {
+  position: absolute;
+  bottom: 100%; /* siempre encima del FAB principal */
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(10px); /* pequeño desplazamiento para animación */
+  z-index: 10;
+}
+
+.fab-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.fab-menu-item {
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  padding: 2px 4px;
+  border-radius: 12px;
+  background-color: #1357ab;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  width: 100%; /* opcional para darle ancho mínimo */
+}
+
+.fab-menu-item ion-icon {
+  font-size: 20px;
+  color: #fff;
+}
+
+.fab-menu-item span {
+  font-size: 14px;
+}
+
+.no-data{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-content: start;
+}

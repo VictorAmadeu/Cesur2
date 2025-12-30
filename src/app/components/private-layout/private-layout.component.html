@@ -1,0 +1,54 @@
+<ion-app>
+  <ion-header>
+    <ion-toolbar>
+      <div class="header-container">
+        <img src="../../../assets/logos/logo-ucalsa-connect-blanco-b.png" alt="UcalSA Connect Logo"
+          class="logo-image" />
+
+        @if(logoutButton) {
+        <!-- Botón de cerrar sesión -->
+        <ion-button fill="clear" slot="end" (click)="turnBack()">
+          <ion-icon name="log-out-outline"></ion-icon>
+        </ion-button>
+        } @else {
+        <!-- Botón de cerrar (simula modal) -->
+        <ion-button fill="clear" slot="end" (click)="turnBack()">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+        }
+      </div>
+      @if (currentRouteName && currentSubtitle) {
+      <section class="route-header">
+        <ion-icon name="bag-handle-outline" class="route-icon"></ion-icon>
+        <div class="route-text">
+          <p class="route-name">{{ currentRouteName }}</p>
+          <p class="route-date">{{ currentSubtitle }}</p>
+          <p class="route-routes"><i>{{ currentSubtitleTwo }}</i></p>
+        </div>
+      </section>
+      }
+    </ion-toolbar>
+  </ion-header>
+  <ion-content>
+    <ion-router-outlet></ion-router-outlet>
+  </ion-content>
+</ion-app>
+
+<!-- <ion-tabs>
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="rutas">
+      <ion-icon name="map" aria-hidden="true"></ion-icon>
+      <ion-label>Rutas</ion-label>
+    </ion-tab-button>
+      
+      <ion-tab-button tab="info1">
+        <ion-icon name="information-circle" aria-hidden="true"></ion-icon>
+        <ion-label>Info 1</ion-label>
+      </ion-tab-button>
+      
+      <ion-tab-button tab="info2">
+        <ion-icon name="information-circle" aria-hidden="true"></ion-icon>
+        <ion-label>Info 2</ion-label>
+      </ion-tab-button>
+    </ion-tab-bar>
+  </ion-tabs> -->

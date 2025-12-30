@@ -1,0 +1,41 @@
+<ion-content>
+  @if (loading) {
+  <div class="loading-conitainer">
+    <app-loading />
+  </div>
+  }
+  @if (!loading) {
+  @if (routeData && routeData.length > 0) {
+  <div class="timeline-container">
+    <div class="timeline-line"></div> <!-- Línea vertical -->
+
+    @for (item of routeData; track $index) {
+    <div class="timeline-item">
+      <div class="timeline-point" [ngClass]="{
+                   'red': isNextToDeliver(item),
+                   'filled': isDelivered(item),
+                   'empty': !isDelivered(item) && !isNextToDeliver(item)
+                 }">
+      </div>
+
+      <ion-item lines="none" [class.disabled]="!canOpen(item)" (click)="onClick(item, item.direccion)" [ngClass]="{
+                        'isDelivered': isDelivered(item),
+                      }">
+        <div class="card-content">
+          <h2>{{ item.direccion }}</h2>
+          <ul>
+            <li>Comidas: {{ item.comidas }}</li>
+            <li>Cenas: {{ item.cenas }}</li>
+          </ul>
+        </div>
+      </ion-item>
+    </div>
+    }
+  </div>
+  } @else {
+  <div class="no-data">
+    <p>No hay datos disponibles para esta ruta.</p>
+  </div>
+  }
+  }
+</ion-content>

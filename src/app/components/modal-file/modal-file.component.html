@@ -1,0 +1,49 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      Expediente: {{ expedienteId }}
+    </ion-title>
+    <ion-button fill="clear" color="dark" size="large" slot="end" (click)="cancel()">
+      <ion-icon name="close-outline"></ion-icon>
+    </ion-button>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if(this.loading){
+  <div class="loading-container">
+    <app-loading />
+  </div>
+  }
+  
+  <canvas #canvas class="signature-canvas"></canvas>
+  
+  @if(!this.loading){
+    @if(!this.base64File){
+
+    <ion-button (click)="selectFile()">Subir archivo</ion-button>
+    <input type="file" #fileInput hidden (change)="onFileSelected($event)" accept="application/pdf,image/*" />
+    }
+
+    <!-- Select de motivos -->
+    <ion-item>
+      <ion-label position="stacked">Tipo de documento</ion-label>
+      <ion-select [(ngModel)]="selectType" placeholder="Seleccione un motivo">
+        @for (type of types; track type.tipo_documento_id) {
+        <ion-select-option [value]="type.tipo_documento_id">
+          {{ type.tipo_documento }}
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    @if(this.base64File){
+    <ion-button (click)="clear()">Borrar</ion-button>
+    <ion-button (click)="firmarPDF()">Firmar PDF</ion-button>
+    }
+    @if(this.base64File){
+    <ion-button (click)="verPDF()">
+      Ver PDF
+    </ion-button>
+    }
+  }
+</ion-content>

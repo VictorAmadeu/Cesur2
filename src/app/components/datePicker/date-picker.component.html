@@ -1,0 +1,23 @@
+<div class="container">
+  <ion-button fill="clear" size="small" (click)="previousDay()">
+<ion-icon name="chevron-back-outline"></ion-icon>
+
+  </ion-button>
+  <ion-datetime-button datetime="datetime"></ion-datetime-button>
+  <ion-button fill="clear" size="small" (click)="nextDay()">
+    <ion-icon name="chevron-forward-outline"></ion-icon>
+  </ion-button>
+</div>
+
+<ion-modal #modal [keepContentsMounted]="true">
+  <ng-template>
+    <ion-datetime id="datetime" presentation="date" [formatOptions]="{
+        date: {
+          weekday: 'short',
+          month: 'long',
+          day: '2-digit',
+        },
+      }" [value]="selectedDate" (ionChange)="onDateChange($event)">
+    </ion-datetime>
+  </ng-template>
+</ion-modal>

@@ -34,4 +34,26 @@
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import '@ionic/angular/css/palettes/dark.system.css';
+/* @import '@ionic/angular/css/palettes/dark.system.css'; */
+
+.main-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+ion-content {
+  overflow-y: auto;
+}
+
+:root {
+  --ion-safe-area-top: 30px !important;
+  --ion-safe-area-bottom: 30px !important;
+}
+
+.loading-conitainer{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}

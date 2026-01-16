@@ -1,17 +1,7 @@
 {
   "name": "App-rutas",
-  "type": "angular-standalone",
   "integrations": {
     "capacitor": {}
   },
-  "server": {
-    "proxy": {
-      "/api": {
-        "target": "https://gstag3.virtualsw.es/ucalsaweb",
-        "secure": false,
-        "changeOrigin": true,
-        "logLevel": "debug"
-      }
-    }
-  }
+  "type": "angular-standalone"
 }

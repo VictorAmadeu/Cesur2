@@ -22,6 +22,8 @@
                         'isDelivered': isDelivered(item),
                       }">
         <div class="card-content">
+          <!-- Orden visible: use item.orden cuando sea válido, vuelva al índice de lista -->
+          <span class="order-badge">{{ getDisplayOrder(item, $index) }}</span>
           <h2>{{ item.direccion }}</h2>
           <ul>
             <li>Comidas: {{ item.comidas }}</li>

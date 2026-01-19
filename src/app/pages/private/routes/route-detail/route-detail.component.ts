@@ -29,6 +29,7 @@ export class RouteDetailComponent implements OnInit {
   loading: Boolean = true;
   deliveredOrderTrace: number[] = [];
   date: string = '';
+  private useBackendOrder = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -51,6 +52,7 @@ export class RouteDetailComponent implements OnInit {
 
   async loadRouteDetail() {
     this.loading = true;
+    this.useBackendOrder = false;
     this.dateService.setDate('2024-08-29');
     this.date = this.dateService.getDate();
 
@@ -73,7 +75,10 @@ export class RouteDetailComponent implements OnInit {
         cachedAt,
       }));
 
+      // Mantener el ordenado original de la app (impacta en el calculo de la siguiente entrega).
       expedientesLocal.sort((a, b) => a.orden - b.orden);
+
+      this.useBackendOrder = this.isValidOrderList(expedientesLocal);
 
       const totalEntregas = expedientesLocal.length;
       this.headerService.setSubtitleTwo(`${totalEntregas} Entregas`);
@@ -132,6 +137,30 @@ export class RouteDetailComponent implements OnInit {
 
   canOpen(item: ExpedienteApi): boolean {
     return this.isDelivered(item) || this.isNextToDeliver(item);
+  }
+
+  getDisplayOrder(item: ExpedienteApi, index: number): number {
+    if (!this.useBackendOrder) return index + 1;
+
+    const order = Number(item.orden);
+    return Number.isFinite(order) && order > 0 ? order : index + 1;
+  }
+
+  private isValidOrderList(list: ExpedienteLocal[]): boolean {
+    if (!list || list.length === 0) return false;
+
+    const orders = list.map(item => Number(item.orden));
+    if (orders.some(order => !Number.isFinite(order) || order <= 0)) return false;
+
+    const unique = new Set(orders);
+    if (unique.size !== orders.length) return false;
+
+    const sorted = [...orders].sort((a, b) => a - b);
+    for (let i = 0; i < sorted.length; i += 1) {
+      if (sorted[i] !== i + 1) return false;
+    }
+
+    return true;
   }
 
 }

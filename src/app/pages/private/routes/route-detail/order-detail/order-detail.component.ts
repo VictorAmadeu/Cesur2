@@ -86,7 +86,7 @@ export class OrderDetailComponent implements OnInit {
   async ngOnInit() {
     this.orderId = this.route.snapshot.paramMap.get('expediente')!;
     this.routeId = this.route.snapshot.paramMap.get('id')!;
-    this.dateService.setDate('2024-08-29');
+    // No establecemos una fecha fija; utilizamos la fecha seleccionada en el DateService.
   }
 
   ionViewWillEnter() {
@@ -270,8 +270,8 @@ export class OrderDetailComponent implements OnInit {
   }
 
   ngOnDestroy() {
-    this.routeId = this.route.snapshot.paramMap.get('fecha')!;
-    this.headerService.setSubtitle('29/08/2024');
+    // No modificamos la fecha ni el subtítulo en la destrucción del componente. La fecha seleccionada
+    // permanecerá gestionada por DateService y los subtítulos se gestionan al cargar la pantalla.
   }
 
   async openModal() {

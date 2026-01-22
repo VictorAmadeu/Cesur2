@@ -53,8 +53,12 @@ export class RouteDetailComponent implements OnInit {
   async loadRouteDetail() {
     this.loading = true;
     this.useBackendOrder = false;
-    this.dateService.setDate('2024-08-29');
+
+    // Obtiene la fecha seleccionada sin sobrescribirla con un valor fijo.
     this.date = this.dateService.getDate();
+
+    // Al entrar (o al volver desde el detalle), asegura que el subtítulo vuelve a mostrar la fecha.
+    this.headerService.setSubtitle(this.date);
 
     const dateApi = this.dateService.getDateApiFormat();
 
@@ -64,7 +68,9 @@ export class RouteDetailComponent implements OnInit {
     try {
       let expedientesLocal: ExpedienteLocal[] = [];
 
-      const response = await this.routesService.getDetailRoute(dateApi, this.routeId);
+      // Enviamos el parámetro soloPendientes con valor 'N' para obtener todas las entregas.
+      const soloPendientes: 'S' | 'N' = 'N';
+      const response = await this.routesService.getDetailRoute(dateApi, this.routeId, soloPendientes);
       const decrypted = await this.cryptoService.decryptData(response.data.data);
       const cachedAt = Date.now();
 

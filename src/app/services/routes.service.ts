@@ -15,11 +15,21 @@ export class RoutesService {
     return data;
   }
 
-  getDetailRoute(fecha: string, rutaId: string) {
+  /**
+   * Obtiene los repartos de una ruta para una fecha determinada.
+   *
+   * La API requiere además del identificador de la ruta un
+   * parámetro `soloPendientes` para indicar si se desean únicamente
+   * las entregas pendientes (`'S'`) o todas (`'N'`).
+   *
+   * @param fecha Fecha en formato `yyyyMMdd`.
+   * @param rutaId Identificador de la ruta.
+   * @param soloPendientes Indica si se devuelven sólo las entregas pendientes. Valores `'S'` o `'N'`. Por defecto `'N'`.
+   */
+  getDetailRoute(fecha: string, rutaId: string, soloPendientes: 'S' | 'N' = 'N') {
     const data = this.axiosService.get('/v1/rutas/repartos', {
-      params: { fecha, rutaId }
+      params: { fecha, rutaId, soloPendientes }
     });
-
     return data;
   }
 

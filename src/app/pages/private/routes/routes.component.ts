@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RoutesService } from 'src/app/services/routes.service';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -13,6 +13,7 @@ import { Network } from '@capacitor/network';
 import { DateService } from 'src/app/services/dale.service';
 import { DeliveredService } from 'src/app/services/delivered-service.service';
 import { RouteHeaderService } from 'src/app/services/route-header.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-routes',
@@ -21,12 +22,17 @@ import { RouteHeaderService } from 'src/app/services/route-header.service';
   imports: [RouterModule, CommonModule, DatePickerComponent, IonContent, IonItem, LoadingComponent],
   standalone: true,
 })
-export class RoutesComponent implements OnInit {
+export class RoutesComponent implements OnInit, OnDestroy {
   routes: any[] = [];
   loading: Boolean = true;
   hasDeliveries: any[] = [];
   date: string = '';
   deliveredOrderTrace: number[] = [];
+  /**
+   * Suscripción al observable de fecha del DateService. Se guarda
+   * para poder liberarla correctamente en ngOnDestroy.
+   */
+  private dateSub?: Subscription;
 
   constructor(
     private routesService: RoutesService,
@@ -38,7 +44,29 @@ export class RoutesComponent implements OnInit {
     private deliveredService: DeliveredService
   ) { }
 
-  async ngOnInit() { }
+  /**
+   * Inicializa la fecha actual y suscribe a los cambios de fecha. Cada vez
+   * que la fecha seleccionada cambia, se vuelve a cargar el listado de rutas.
+   */
+  async ngOnInit() {
+    // Obtenemos la fecha inicial almacenada en el servicio.
+    this.date = this.dateService.getDate();
+    // Nos suscribimos a los cambios de fecha. Si la fecha cambia,
+    // actualizamos el valor local y recargamos las rutas.
+    this.dateSub = this.dateService.selectedDate$.subscribe(date => {
+      // Si la fecha es la misma no recargamos para evitar peticiones innecesarias.
+      if (date === this.date) return;
+      this.date = date;
+      this.loadRouteDetail();
+    });
+  }
+
+  /**
+   * Al destruir el componente cancelamos la suscripción para evitar fugas de memoria.
+   */
+  ngOnDestroy() {
+    this.dateSub?.unsubscribe();
+  }
 
   ionViewWillEnter() {
     this.loadRouteDetail();
@@ -47,7 +75,7 @@ export class RoutesComponent implements OnInit {
   async loadRouteDetail() {
     this.loading = true;
     this.headerService.clearAll();
-    this.dateService.setDate('2024-08-29');
+    // Obtenemos la fecha actual sin forzarla a ningún valor fijo.
     this.date = this.dateService.getDate();
     const dateApi = this.dateService.getDateApiFormat();
 

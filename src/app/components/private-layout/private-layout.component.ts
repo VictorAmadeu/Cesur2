@@ -5,6 +5,7 @@ import { AuthService } from 'src/app/services/auth.service';
 import { Location } from '@angular/common';
 import { NavigationService } from 'src/app/services/navigation.service';
 import { RouteHeaderService } from 'src/app/services/route-header.service';
+import { DateService } from 'src/app/services/dale.service';
 
 @Component({
   selector: 'app-private-layout',
@@ -21,13 +22,15 @@ export class PrivateLayoutComponent implements OnInit {
   // Línea adicional opcional para mostrar progreso (ej: "2 de 43 entregas" = 2/43)
   currentSubtitleProgress?: string;
 
-  date: string = '29/08/2024';
+  // Evitamos fecha fija: se inicializa desde el servicio
+  date: string = '';
   logoutButton: boolean = true;
 
   constructor(
     private router: Router,
     private headerService: RouteHeaderService,
     private navigationService: NavigationService,
+    private dateService: DateService,
   ) {
     this.headerService.header$.subscribe(info => {
       this.currentRouteName = info.title;
@@ -45,7 +48,10 @@ export class PrivateLayoutComponent implements OnInit {
     });
   }
 
-  ngOnInit() { }
+  ngOnInit() {
+    // Carga la fecha actual/seleccionada para evitar hardcode en UI
+    this.date = this.dateService.getDate();
+  }
 
   onClick(tab: string) {
     this.router.navigate([`/privado/${tab}`]);

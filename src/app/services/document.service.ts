@@ -15,22 +15,28 @@ export class DocumentosService {
   ) {}
 
   /**
-   * Envía un documento firmado, o lo guarda localmente si no hay conexión
+   * Envía un documento firmado, o lo guarda localmente si no hay conexión.
    */
-  async subirDocumentoFirmado(expedienteId: string, tipoDocumentoId: string, firmado: boolean, firmadoBase63: string) {
+  async subirDocumentoFirmado(
+    expedienteId: string,
+    tipoDocumentoId: string,
+    firmado: boolean,
+    firmadoBase64: string
+  ) {
+    const expedienteIdNumber = Number(expedienteId);
+
     const payload: UrgenciaLocal = {
-      expediente_id: parseInt(expedienteId),
+      expediente_id: expedienteIdNumber,
       tipo_documento_id: tipoDocumentoId,
-      firmado: firmado,
-      firmadoBase64: firmadoBase63,
-      synced: 0
+      firmado,
+      firmadoBase64,
+      synced: 0,
     };
 
-    // ✅ Siempre guardamos localmente primero
+    // Guardamos localmente primero (offline-first)
     await this.urgenciasRepository.upsertUrgencia(payload);
 
     if (!this.network.isOnline) {
-      console.log('[DocumentosService] Sin conexión, guardado local pendiente.');
       return { status: 'offline', message: 'Guardado local. Se sincronizará más tarde.' };
     }
 
@@ -40,21 +46,21 @@ export class DocumentosService {
       const data = JSON.parse(decrypted);
 
       if (data.status === 'OK') {
-        // Marcar como sincronizado
+        // markAsSynced está tipado para recibir string en este repo; pasamos el expedienteId original.
         await this.urgenciasRepository.markAsSynced(expedienteId);
         return { status: 'ok', message: 'Documento enviado correctamente.' };
       } else {
-        console.warn('[DocumentosService] Error en respuesta API:', data);
+        console.error('[DocumentosService] Error en respuesta API.');
         return { status: 'error', message: 'Error en el envío. Guardado localmente.' };
       }
     } catch (err) {
-      console.error('[DocumentosService] Error al enviar, guardando local.', err);
+      console.error('[DocumentosService] Error al enviar, guardando local.');
       return { status: 'offline', message: 'Guardado local. Se sincronizará más tarde.' };
     }
   }
 
   async getSyncDocuments(): Promise<UrgenciaLocal[]> {
-      const urgencias = await this.urgenciasRepository.getPendingUrgencias();
-      return urgencias;
+    const urgencias = await this.urgenciasRepository.getPendingUrgencias();
+    return urgencias;
   }
 }

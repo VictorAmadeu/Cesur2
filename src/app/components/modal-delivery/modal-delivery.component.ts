@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ModalController } from '@ionic/angular'; // <-- import
+import { ModalController } from '@ionic/angular';
 import { CryptoService } from 'src/app/services/crypto.service';
 import { RoutesService } from 'src/app/services/routes.service';
 import {
@@ -14,9 +14,9 @@ import {
   IonTitle,
   IonIcon,
   IonSelect,
-  IonSelectOption
+  IonSelectOption,
 } from '@ionic/angular/standalone';
-import { CommonModule } from '@angular/common'; 
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -38,20 +38,20 @@ import { FormsModule } from '@angular/forms';
     IonTitle,
     IonIcon,
     IonSelect,
-    IonSelectOption
-  ]
+    IonSelectOption,
+  ],
 })
 export class ModalDeliveryComponent implements OnInit {
   @Input() expedienteId!: string;
 
   observaciones: string = '';
-  motivos: Array<{ motivo_id: string, motivo: string }> = [];
+  motivos: Array<{ motivo_id: string; motivo: string }> = [];
   selectedMotivo: string = '';
 
   constructor(
     private routesService: RoutesService,
     private cryptoService: CryptoService,
-    private modalCtrl: ModalController // <-- inyectar
+    private modalCtrl: ModalController
   ) {}
 
   async ngOnInit() {
@@ -59,16 +59,16 @@ export class ModalDeliveryComponent implements OnInit {
   }
 
   cancel() {
-    this.modalCtrl.dismiss(null, 'cancel'); // <-- cierra correctamente
+    this.modalCtrl.dismiss(null, 'cancel');
   }
 
   confirm() {
     const payload = {
       expedienteId: this.expedienteId || '',
       motivo: this.selectedMotivo,
-      observaciones: this.observaciones || ''
+      observaciones: this.observaciones || '',
     };
-    this.modalCtrl.dismiss(payload, 'confirm'); // <-- cierra correctamente
+    this.modalCtrl.dismiss(payload, 'confirm');
   }
 
   async getMotives() {
@@ -76,9 +76,9 @@ export class ModalDeliveryComponent implements OnInit {
       const req = await this.routesService.getMotives();
       const decrypted = await this.cryptoService.decryptData(req.data.data);
       this.motivos = JSON.parse(decrypted);
-      console.log("Motivos cargados:", this.motivos);
-    } catch (error) {
-      console.error("Error al obtener motivos", error);
+    } catch (error: any) {
+      console.error('[ModalDeliveryComponent] Error al obtener motivos:', { message: error?.message });
+      this.motivos = [];
     }
   }
 }

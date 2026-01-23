@@ -11,7 +11,6 @@ import { ExpedientesRepository } from './database-movil/repositories/expedientes
   providedIn: 'root',
 })
 export class DeliveredService {
-
   constructor(
     private entregasRepository: EntregasRepository,
     private network: NetworkService,
@@ -22,22 +21,28 @@ export class DeliveredService {
 
   async getDeliveredOrders(expediente_id: number): Promise<number[]> {
     const deliveredIds: number[] = [];
-      const entrega = await this.entregasRepository.getEntregaById(expediente_id);
-      if (entrega) {
-        deliveredIds.push(expediente_id);
-      }
-
+    const entrega = await this.entregasRepository.getEntregaById(expediente_id);
+    if (entrega) deliveredIds.push(expediente_id);
     return deliveredIds;
   }
 
   async getDeliveredRoutes(ruta_id: number): Promise<number[]> {
     const deliveredIds: number[] = [];
-      const entrega = await this.entregasRepository.getEntregaByRoutes(ruta_id);
-      if (entrega) {
-        deliveredIds.push(ruta_id);
-      }
-
+    const entrega = await this.entregasRepository.getEntregaByRoutes(ruta_id);
+    if (entrega) deliveredIds.push(ruta_id);
     return deliveredIds;
+  }
+
+  // Devuelve IDs de rutas con entregas locales (consulta bulk) y sin duplicados.
+  async getDeliveredRouteIds(): Promise<number[]> {
+    const ids = await this.entregasRepository.getRutaIdsWithEntregas();
+    return Array.from(new Set(ids));
+  }
+
+  // Devuelve IDs de expedientes entregados para una ruta (consulta bulk) y sin duplicados.
+  async getDeliveredOrderIdsByRuta(ruta_id: number): Promise<number[]> {
+    const ids = await this.entregasRepository.getExpedienteIdsByRuta(ruta_id);
+    return Array.from(new Set(ids));
   }
 
   async getSyncDeliveredOrders(): Promise<EntregaLocal[]> {
@@ -45,20 +50,26 @@ export class DeliveredService {
     return entregas;
   }
 
-  async addDelivered(rutaId: number, expedienteId: number, metodo: 'NFC' | 'manual', motivo: string, observacion: string) {
+  async addDelivered(
+    rutaId: number,
+    expedienteId: number,
+    metodo: 'NFC' | 'manual',
+    motivo: string,
+    observacion: string
+  ) {
     const payload: EntregaLocal = {
       ruta_id: rutaId,
       expediente_id: expedienteId,
-      metodo: metodo,
-      motivo: motivo,
-      observacion: observacion,
+      metodo,
+      motivo,
+      observacion,
       timestamp: Date.now(),
       synced: 0,
     };
+
     await this.entregasRepository.addEntrega(payload);
 
     if (!this.network.isOnline) {
-      console.log('[DeliveredService] Sin conexión, guardado local pendiente.');
       return { status: 'offline', message: 'Guardado local. Se sincronizará más tarde.' };
     }
 
@@ -67,15 +78,15 @@ export class DeliveredService {
       const decrypted = await this.crypto.decryptData(response.data.data);
       const data = JSON.parse(decrypted);
 
-       if (data.status === 'OK') {
+      if (data.status === 'OK') {
         await this.entregasRepository.markAsSynced(expedienteId);
         return { status: 'ok', message: 'Documento enviado correctamente.' };
       } else {
-        console.warn('[DeliveredService] Error en respuesta API:', data);
+        console.error('[DeliveredService] Error en respuesta API.');
         return { status: 'error', message: 'Error en el envío. Guardado localmente.' };
       }
-      } catch (err) {
-      console.error('[DeliveredService] Error al enviar, guardando local.', err);
+    } catch (err) {
+      console.error('[DeliveredService] Error al enviar, guardando local.');
       return { status: 'offline', message: 'Guardado local. Se sincronizará más tarde.' };
     }
   }
@@ -90,21 +101,16 @@ export class DeliveredService {
         const data: ExpedienteDetalleLocal = JSON.parse(decrypted);
         data.cachedAt = Date.now();
 
-        // Guardar local
         await this.expedientesRepository.addExpediente(data);
-
         return data;
       } catch (err) {
-        console.warn('[DeliveredService] Error cargando desde API, intentando DB local.', err);
+        console.error('[DeliveredService] Error cargando desde API, intentando DB local.');
       }
     }
 
     const local = await this.expedientesRepository.getExpedienteById(Number(expedienteId));
-    if (local) {
-      return local;
-    }
+    if (local) return local;
 
     return null;
   }
-
 }

@@ -197,9 +197,11 @@
           <ion-icon name="map-outline"></ion-icon>
         </ion-fab-button>
 
-        <!-- <ion-fab-button (click)="onClickQr()">
-          <ion-icon name="qr-code-outline"></ion-icon>
-        </ion-fab-button> -->
+        @if (qrSupported) {
+          <ion-fab-button (click)="onClickQr()">
+            <ion-icon name="qr-code-outline"></ion-icon>
+          </ion-fab-button>
+        }
       </ion-fab>
     } @else {
       <ion-fab slot="fixed" vertical="bottom" horizontal="end">

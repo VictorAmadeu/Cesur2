@@ -4,17 +4,11 @@ import { RoutesService } from 'src/app/services/routes.service';
 import { CommonModule } from '@angular/common';
 import { IonContent, IonItem } from '@ionic/angular/standalone';
 import { LoadingComponent } from 'src/app/components/loading/loading.component';
-import { AppLauncher } from '@capacitor/app-launcher';
 import { CryptoService } from 'src/app/services/crypto.service';
-import { DeliveredOrder } from 'src/app/services/database-movil/models/delivered-order.model';
 import { DateService } from 'src/app/services/dale.service';
 import { ExpedienteApi, ExpedienteLocal } from 'src/app/types/expedientes_local.type';
-import { Network } from '@capacitor/network';
-import { ExpedienteLocalRepository } from 'src/app/services/database-movil/repositories/expedientes_local.repository';
-import { EntregasRepository } from 'src/app/services/database-movil/repositories/entregas_local.repository';
 import { DeliveredService } from 'src/app/services/delivered-service.service';
 import { RouteHeaderService } from 'src/app/services/route-header.service';
-import { ExpedienteDetalleLocal } from 'src/app/types/expedientes_detalle_local.type';
 
 @Component({
   selector: 'app-route-detail',
@@ -25,7 +19,6 @@ import { ExpedienteDetalleLocal } from 'src/app/types/expedientes_detalle_local.
 export class RouteDetailComponent implements OnInit {
   routeId!: string;
   routeData: ExpedienteApi[] = [];
-  routes: any[] = [];
   loading: Boolean = true;
   deliveredOrderTrace: number[] = [];
   date: string = '';
@@ -38,9 +31,8 @@ export class RouteDetailComponent implements OnInit {
     private headerService: RouteHeaderService,
     private cryptoService: CryptoService,
     private dateService: DateService,
-    private expedienteLocalRepository: ExpedienteLocalRepository,
     private deliveredService: DeliveredService
-  ) { }
+  ) {}
 
   async ngOnInit() {
     this.routeId = this.route.snapshot.paramMap.get('id')!;
@@ -54,34 +46,26 @@ export class RouteDetailComponent implements OnInit {
     this.loading = true;
     this.useBackendOrder = false;
 
-    // Obtiene la fecha seleccionada sin sobrescribirla con un valor fijo.
     this.date = this.dateService.getDate();
-
-    // Al entrar (o al volver desde el detalle), asegura que el subtítulo vuelve a mostrar la fecha.
     this.headerService.setSubtitle(this.date);
 
     const dateApi = this.dateService.getDateApiFormat();
 
-    // Evita que quede un contador antiguo en el header si esta pantalla falla o recarga
     this.headerService.clearSubtitleProgress();
 
     try {
-      let expedientesLocal: ExpedienteLocal[] = [];
-
-      // Enviamos el parámetro soloPendientes con valor 'N' para obtener todas las entregas.
       const soloPendientes: 'S' | 'N' = 'N';
       const response = await this.routesService.getDetailRoute(dateApi, this.routeId, soloPendientes);
       const decrypted = await this.cryptoService.decryptData(response.data.data);
       const cachedAt = Date.now();
 
-      expedientesLocal = (JSON.parse(decrypted) as ExpedienteLocal[]).map(r => ({
+      const expedientesLocal = (JSON.parse(decrypted) as ExpedienteLocal[]).map(r => ({
         ...r,
         fecha: this.date,
         ruta_id: Number(this.routeId),
         cachedAt,
       }));
 
-      // Mantener el ordenado original de la app (impacta en el calculo de la siguiente entrega).
       expedientesLocal.sort((a, b) => a.orden - b.orden);
 
       this.useBackendOrder = this.isValidOrderList(expedientesLocal);
@@ -89,12 +73,11 @@ export class RouteDetailComponent implements OnInit {
       const totalEntregas = expedientesLocal.length;
       this.headerService.setSubtitleTwo(`${totalEntregas} Entregas`);
 
-      this.deliveredOrderTrace = [];
-      for (const exp of expedientesLocal) {
-        const entregados = await this.deliveredService.getDeliveredOrders(Number(exp.expediente_id));
-        if (entregados && entregados.length > 0) {
-          this.deliveredOrderTrace.push(...entregados);
-        }
+      const rutaIdNumber = Number(this.routeId);
+      if (Number.isFinite(rutaIdNumber)) {
+        this.deliveredOrderTrace = await this.deliveredService.getDeliveredOrderIdsByRuta(rutaIdNumber);
+      } else {
+        this.deliveredOrderTrace = [];
       }
 
       this.deliveredOrderTrace = Array.from(new Set(this.deliveredOrderTrace));
@@ -116,18 +99,14 @@ export class RouteDetailComponent implements OnInit {
   }
 
   async onClick(item: ExpedienteApi, address: string) {
-
     if (!this.canOpen(item)) return;
 
     const expedienteId = item.expediente_id;
-
     const routeId = this.route.snapshot.paramMap.get('id');
 
     this.headerService.setSubtitle(address);
 
-    this.router.navigate(
-      ['/privado/rutas', routeId, expedienteId]
-    );
+    this.router.navigate(['/privado/rutas', routeId, expedienteId]);
   }
 
   isNextToDeliver(item: ExpedienteApi): boolean {
@@ -168,5 +147,4 @@ export class RouteDetailComponent implements OnInit {
 
     return true;
   }
-
 }

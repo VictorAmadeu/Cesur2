@@ -9,10 +9,10 @@ import {
   IonToolbar,
   IonTitle,
   IonIcon,
-      IonItem,
-    IonLabel,
-    IonSelect,
-    IonSelectOption
+  IonItem,
+  IonLabel,
+  IonSelect,
+  IonSelectOption,
 } from '@ionic/angular/standalone';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileViewer } from '@capacitor/file-viewer';
@@ -22,9 +22,8 @@ import { RoutesService } from 'src/app/services/routes.service';
 import { UrgenciasRepository } from 'src/app/services/database-movil/repositories/urgencias_local.repository';
 import { ToastService } from 'src/app/services/toast.service';
 import { CryptoService } from 'src/app/services/crypto.service';
-import { ModalController } from '@ionic/angular'; // <-- import
+import { ModalController } from '@ionic/angular';
 import { DocumentosService } from 'src/app/services/document.service';
-import { UrgenciaLocal } from 'src/app/types/urgencias_local.type';
 import { LoadingComponent } from '../loading/loading.component';
 
 export interface FilesystemWriteFileResult {
@@ -45,15 +44,12 @@ export interface FilesystemWriteFileResult {
     IonToolbar,
     IonTitle,
     IonIcon,
-    CommonModule,
-    FormsModule,
-    IonButton,
     IonItem,
     IonLabel,
     IonSelect,
     IonSelectOption,
-    LoadingComponent
-  ]
+    LoadingComponent,
+  ],
 })
 export class ModalFileComponent implements OnInit {
   @ViewChild('fileInput', { static: false }) fileInput!: ElementRef<HTMLInputElement>;
@@ -62,29 +58,39 @@ export class ModalFileComponent implements OnInit {
 
   showPdf = false;
   pdfUrl!: SafeResourceUrl;
+
   base64File: string | null = null;
-  private ctx!: CanvasRenderingContext2D;
-  private drawing = false;
   signaturePad!: SignaturePad;
+
   showPdfSigned: boolean = false;
   resultPdfSinged: FilesystemWriteFileResult | undefined;
-  types: Array<{ tipo_documento_id: string, tipo_documento: string }> = [];
+
+  types: Array<{ tipo_documento_id: string; tipo_documento: string }> = [];
   selectType: string = '';
   loading: boolean = false;
 
-  constructor(private documentosService: DocumentosService, private modalCtrl: ModalController, private routesService: RoutesService, private urgenciasRepository: UrgenciasRepository, private cryptoService: CryptoService, private toastService: ToastService) { }
+  constructor(
+    private documentosService: DocumentosService,
+    private modalCtrl: ModalController,
+    private routesService: RoutesService,
+    private urgenciasRepository: UrgenciasRepository,
+    private cryptoService: CryptoService,
+    private toastService: ToastService
+  ) {}
 
   async ngOnInit() {
-    this.getTypes();
+    await this.getTypes();
   }
 
   async getTypes() {
     this.loading = true;
-    const req = await this.routesService.getTypes();
-    const decrypted = await this.cryptoService.decryptData(req.data.data);
-    this.types = JSON.parse(decrypted);
-    console.log(JSON.parse(decrypted))
-    this.loading = false;
+    try {
+      const req = await this.routesService.getTypes();
+      const decrypted = await this.cryptoService.decryptData(req.data.data);
+      this.types = JSON.parse(decrypted);
+    } finally {
+      this.loading = false;
+    }
   }
 
   selectFile() {
@@ -97,11 +103,10 @@ export class ModalFileComponent implements OnInit {
 
     const reader = new FileReader();
     reader.onload = () => {
-      this.base64File = (reader.result as string).split(',')[1]; // solo base64, sin el encabezado data:
-      console.log("Archivo en base64:", this.base64File.substring(0, 100) + "..."); // muestra un preview
+      this.base64File = (reader.result as string).split(',')[1]; // Solo base64, sin encabezado data:
     };
-    reader.onerror = (err) => {
-      console.error("Error leyendo archivo:", err);
+    reader.onerror = err => {
+      console.error('Error leyendo archivo:', err);
     };
     reader.readAsDataURL(file);
   }
@@ -110,21 +115,20 @@ export class ModalFileComponent implements OnInit {
     try {
       const fileName = `archivo_${Date.now()}.pdf`;
 
-      if (this.base64File) {
-        // Guardar el PDF en el sistema de archivos
-        const result = await Filesystem.writeFile({
-          path: fileName,
-          data: this.base64File,
-          directory: Directory.Cache,
-        });
-
-        // Abrir el PDF con el visor nativo
-        await FileViewer.openDocumentFromLocalPath({
-          path: result.uri,
-        });
-      } else {
+      if (!this.base64File) {
         console.error('No hay archivo PDF para mostrar.');
+        return;
       }
+
+      const result = await Filesystem.writeFile({
+        path: fileName,
+        data: this.base64File,
+        directory: Directory.Cache,
+      });
+
+      await FileViewer.openDocumentFromLocalPath({
+        path: result.uri,
+      });
     } catch (err) {
       console.error('Error abriendo PDF:', err);
     }
@@ -135,19 +139,16 @@ export class ModalFileComponent implements OnInit {
   }
 
   confirm() {
-
-    const payload = {
-    };
-
+    const payload = {};
     this.modalCtrl.dismiss(payload, 'confirm');
   }
 
-  //FIRMA DIGITAL
   ngAfterViewInit() {
     this.signaturePad = new SignaturePad(this.canvas.nativeElement, {
       backgroundColor: 'rgb(255,255,255)',
-      penColor: 'black'
+      penColor: 'black',
     });
+
     this.resizeCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
   }
@@ -155,8 +156,8 @@ export class ModalFileComponent implements OnInit {
   resizeCanvas() {
     const canvas = this.canvas.nativeElement;
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.width = 300 * ratio; // ancho fijo
-    canvas.height = 300 * ratio; // altura fija
+    canvas.width = 300 * ratio;
+    canvas.height = 300 * ratio;
     canvas.getContext('2d')!.scale(ratio, ratio);
     this.signaturePad.clear();
   }
@@ -167,73 +168,68 @@ export class ModalFileComponent implements OnInit {
 
   getSignature(): string | null {
     if (this.signaturePad.isEmpty()) return null;
-    return this.signaturePad.toDataURL(); // base64 de la firma
+    return this.signaturePad.toDataURL();
   }
 
   async firmarPDF() {
     this.loading = true;
+
     try {
-      if(this.selectType === '') {
-        this.toastService.show("Debe seleccionar un tipo de documento", "danger")
+      if (this.selectType === '') {
+        this.toastService.show('Debe seleccionar un tipo de documento', 'danger');
         return;
       }
-  
+
       if (!this.base64File) {
         console.error('No hay PDF para firmar.');
         return;
       }
-  
-      // Obtener la firma en base64 desde el canvas
+
       const signatureDataUrl = this.getSignature();
       if (!signatureDataUrl) {
         console.error('No hay firma dibujada.');
         return;
       }
-  
-      // Cargar el PDF existente
+
       const pdfDoc = await PDFDocument.load(this.base64File, { ignoreEncryption: true });
       const pages = pdfDoc.getPages();
       const firstPage = pages[0];
-  
-      // Convertir la firma a bytes
+
       const pngBytes = await fetch(signatureDataUrl).then(res => res.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
-  
-      // Tamaño de la página
-      const { width, height } = firstPage.getSize();
-  
-      // Insertar la firma en la parte inferior derecha
+
+      const { width } = firstPage.getSize();
+
       firstPage.drawImage(pngImage, {
-        x: width - 200,   // ajustar horizontal
-        y: 50,            // ajustar vertical
-        width: 150,       // ancho de la firma
-        height: 50        // alto de la firma
+        x: width - 200,
+        y: 50,
+        width: 150,
+        height: 50,
       });
-  
+
       const pdfBytes = await pdfDoc.save();
       const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
-  
+
       const req = await this.documentosService.subirDocumentoFirmado(
         this.expedienteId,
         this.selectType,
         true,
-        pdfBase64,
+        pdfBase64
       );
-  
+
       if (req.status === 'ok') {
-        this.toastService.show("PDF firmado correctamente", "success")
-      } else if(req.status === 'offline') {
-        this.toastService.show(req.message, "warning")
-      } else{
-        this.toastService.show(req.message, "danger")
+        this.toastService.show('PDF firmado correctamente', 'success');
+      } else if (req.status === 'offline') {
+        this.toastService.show(req.message, 'warning');
+      } else {
+        this.toastService.show(req.message, 'danger');
       }
-  
+
       this.confirm();
     } catch (error) {
       console.error('Error firmando PDF:', error);
-    }finally {
+    } finally {
       this.loading = false;
     }
   }
-
 }

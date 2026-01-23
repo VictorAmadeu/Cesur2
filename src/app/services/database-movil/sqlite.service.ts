@@ -13,56 +13,30 @@ export class SqliteService {
     this.sqlite = new SQLiteConnection(CapacitorSQLite);
   }
 
-  /**
-   * Inicializa la base de datos asegurando que no haya conexiones duplicadas.
-   */
   async openDatabase(): Promise<void> {
     try {
-      console.log('🔹 Inicializando base de datos...');
-
-      // 1. Comprobar consistencia de conexiones
       const consistency = await CapacitorSQLite.checkConnectionsConsistency({
         dbNames: [this.dbName],
-        openModes: ['readwrite']
+        openModes: ['readwrite'],
       });
-      console.log('checkConnectionsConsistency:', consistency);
-
 
       if (consistency.result) {
-        console.log('⚠️ Recuperando conexión existente...');
         this.db = await this.sqlite.retrieveConnection(this.dbName, false);
       } else {
-        console.log('🔹 Creando nueva conexión...');
-        this.db = await this.sqlite.createConnection(
-          this.dbName,
-          false,
-          'no-encryption',
-          3,
-          false
-        );
+        this.db = await this.sqlite.createConnection(this.dbName, false, 'no-encryption', 3, false);
       }
 
-      // 3. Abrir la conexión
       await this.db.open();
-      console.log('✅ Base de datos abierta correctamente.');
-
-      // 4. Crear tablas si no existen
       await this.createTables();
-      console.log('✅ DB lista y tablas creadas correctamente');
-
-    } catch (err) {
-      console.error('❌ Error abriendo la DB', err);
-      throw err;
+    } catch (_err) {
+      console.error('[SqliteService] Error abriendo la base de datos.');
+      throw _err;
     }
   }
 
-  /**
-   * Crea las tablas necesarias si no existen.
-   */
   private async createTables(): Promise<void> {
     if (!this.db) return;
 
-    // 1️⃣ Usuarios
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,8 +50,6 @@ export class SqliteService {
       );
     `);
 
-
-    // 2️⃣ Rutas del día
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS rutas_local (
         ruta_id INTEGER PRIMARY KEY,
@@ -87,8 +59,6 @@ export class SqliteService {
       );
     `);
 
-
-    // 3️⃣ Expedientes de la ruta
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS expedientes_local (
         expediente_id INTEGER PRIMARY KEY,
@@ -102,7 +72,6 @@ export class SqliteService {
       );
     `);
 
-    // 2️⃣ Crear la tabla nueva
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS expedientes_detalle_local (
         expediente TEXT,
@@ -114,7 +83,6 @@ export class SqliteService {
       );
     `);
 
-    // 5️⃣ Urgencias (PDF a firmar)
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS urgencias_local (
         expediente_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,7 +94,6 @@ export class SqliteService {
       );
     `);
 
-    // 6️⃣ Entregas locales
     await this.db.execute(`
       CREATE TABLE IF NOT EXISTS entregas_local (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,64 +109,44 @@ export class SqliteService {
     `);
   }
 
-  /**
-   * Devuelve la conexión activa o lanza error si no está lista.
-   */
   get connection(): SQLiteDBConnection {
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
+    if (!this.db) throw new Error('Database not initialized');
     return this.db;
   }
 
-  /**
-   * Ejecuta un query sin retorno (INSERT, UPDATE, DELETE).
-   */
   async execute(query: string, params: any[] = []): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     await this.db.run(query, params);
   }
 
-  /**
-   * Ejecuta un SELECT y retorna resultados.
-   */
   async query(query: string, params: any[] = []): Promise<any> {
     if (!this.db) throw new Error('Database not initialized');
     const result = await this.db.query(query, params);
     return result.values || [];
   }
 
-  /**
-   * Cierra la conexión manualmente (opcional, útil en logout o reset).
-   */
   async closeDatabase(): Promise<void> {
     try {
       const existing = await this.sqlite.isConnection(this.dbName, false);
       if (existing.result) {
         await this.sqlite.closeConnection(this.dbName, false);
         this.db = null;
-        console.log('🔹 Conexión cerrada correctamente');
       }
-    } catch (err) {
-      console.error('❌ Error cerrando la DB', err);
+    } catch (_err) {
+      console.error('[SqliteService] Error cerrando la base de datos.');
     }
   }
 
   async deleteDatabase(): Promise<void> {
     try {
-      // Verificar si existe conexión antes de intentar cerrarla
       const existing = await this.sqlite.isConnection(this.dbName, false);
       if (existing.result) {
-        console.log('🔹 Cerrando conexión antes de eliminar...');
         await this.sqlite.closeConnection(this.dbName, false);
       }
 
-      // Ahora eliminar la DB
       await CapacitorSQLite.deleteDatabase({ database: this.dbName });
-      console.log('🗑️ Base de datos eliminada correctamente');
-    } catch (err) {
-      console.warn('⚠️ No se pudo eliminar la base de datos (posiblemente no existe todavía):', err);
+    } catch (_err) {
+      console.error('[SqliteService] Error eliminando la base de datos.');
     }
   }
-
 }

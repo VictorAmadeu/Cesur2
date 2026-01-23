@@ -34,12 +34,33 @@ export class EntregasRepository {
     return rows.length ? (rows[0] as EntregaLocal) : null;
   }
 
-    async getEntregaByRoutes(ruta_id: number): Promise<EntregaLocal | null> {
+  async getEntregaByRoutes(ruta_id: number): Promise<EntregaLocal | null> {
     const rows = await this.sqlite.query(
       'SELECT * FROM entregas_local WHERE ruta_id = ?',
       [ruta_id]
     );
     return rows.length ? (rows[0] as EntregaLocal) : null;
+  }
+
+  // Devuelve todas las rutas que tienen al menos una entrega local registrada (1 query en vez de N).
+  async getRutaIdsWithEntregas(): Promise<number[]> {
+    const rows = await this.sqlite.query(
+      'SELECT DISTINCT ruta_id FROM entregas_local'
+    );
+    return rows
+      .map((row: any) => Number(row.ruta_id))
+      .filter((id: number) => Number.isFinite(id));
+  }
+
+  // Devuelve todos los expedientes entregados para una ruta concreta (1 query en vez de N).
+  async getExpedienteIdsByRuta(ruta_id: number): Promise<number[]> {
+    const rows = await this.sqlite.query(
+      'SELECT expediente_id FROM entregas_local WHERE ruta_id = ?',
+      [ruta_id]
+    );
+    return rows
+      .map((row: any) => Number(row.expediente_id))
+      .filter((id: number) => Number.isFinite(id));
   }
 
   async getPendingEntregas(): Promise<EntregaLocal[]> {
@@ -62,7 +83,7 @@ export class EntregasRepository {
       [expediente_id]
     );
   }
-  
+
   async clear(): Promise<void> {
     const query = `DELETE FROM entregas_local`;
     await this.sqlite.execute(query);

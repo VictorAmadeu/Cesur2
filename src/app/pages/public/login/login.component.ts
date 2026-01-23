@@ -58,7 +58,6 @@ export class LoginComponent implements OnInit {
   //     await this.urgenciasRepository.clear()
   //     await this.usuarioRepository.clear()  
   //   } catch (error) {
-  //     console.log(error)
   //   }
   // }
 

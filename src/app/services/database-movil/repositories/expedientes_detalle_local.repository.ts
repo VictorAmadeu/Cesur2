@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SqliteService } from '../sqlite.service';
-import { Comensal, ExpedienteDetalleLocal } from '../../../types/expedientes_detalle_local.type';
+import { ExpedienteDetalleLocal } from '../../../types/expedientes_detalle_local.type';
 
 @Injectable({
   providedIn: 'root',
@@ -8,9 +8,7 @@ import { Comensal, ExpedienteDetalleLocal } from '../../../types/expedientes_det
 export class ExpedientesRepository {
   constructor(private sqlite: SqliteService) {}
 
-  // Insertar expediente + comensales
   async addExpediente(expediente_req: ExpedienteDetalleLocal): Promise<void> {
-    console.log("EXpediente", expediente_req)
     await this.sqlite.execute(
       `
       INSERT OR REPLACE INTO expedientes_detalle_local 
@@ -28,8 +26,6 @@ export class ExpedientesRepository {
     );
   }
 
-
-  // Obtener un expediente con sus comensales
   async getExpedienteById(expediente_id: number): Promise<ExpedienteDetalleLocal | null> {
     const rows = await this.sqlite.query(
       'SELECT * FROM expedientes_detalle_local WHERE expediente_id = ?',
@@ -38,67 +34,46 @@ export class ExpedientesRepository {
 
     if (!rows.length) return null;
 
-    const expedienteRow = rows[0];
+    const row = rows[0];
 
     return {
-      expediente_id: expedienteRow.expediente_id,
-      notas: JSON.parse(expedienteRow.notas || '[]'),
-      comensales: JSON.parse(expedienteRow.comensales || '[]'),
-      cachedAt: expedienteRow.cachedAt,
-      synced: expedienteRow.synced,
+      expediente: row.expediente ?? '',
+      expediente_id: row.expediente_id,
+      notas: JSON.parse(row.notas || '[]'),
+      comensales: JSON.parse(row.comensales || '[]'),
+      cachedAt: row.cachedAt,
+      synced: row.synced,
     } as ExpedienteDetalleLocal;
   }
-  
 
-  // Obtener expedientes pendientes de sincronizar
   async getPendingExpedientes(): Promise<ExpedienteDetalleLocal[]> {
-    const rows = await this.sqlite.query(
-      'SELECT * FROM expedientes_local WHERE synced = 0'
-    );
+    const rows = await this.sqlite.query('SELECT * FROM expedientes_detalle_local WHERE synced = 0');
 
-    const result: ExpedienteDetalleLocal[] = [];
-    for (const row of rows) {
-      const comensales = await this.sqlite.query(
-        'SELECT * FROM comensales WHERE expediente_id = ?',
-        [row.expediente_id]
-      );
-      result.push({
-        expediente: row.expediente,
-        expediente_id: row.expediente_id,
-        notas: JSON.parse(row.notas || '[]'),
-        comensales: comensales.map((c: any) => ({
-          ...c,
-          notasDieta: JSON.parse(c.notasDieta || '[]'),
-          notasReparto: JSON.parse(c.notasReparto || '[]'),
-          aportesEspeciales: JSON.parse(c.aportesEspeciales || '[]'),
-        })),
-        cachedAt: row.cachedAt,
-        synced: row.synced,
-      });
-    }
-    return result;
+    return (rows || []).map((row: any) => ({
+      expediente: row.expediente ?? '',
+      expediente_id: row.expediente_id,
+      notas: JSON.parse(row.notas || '[]'),
+      comensales: JSON.parse(row.comensales || '[]'),
+      cachedAt: row.cachedAt,
+      synced: row.synced,
+    })) as ExpedienteDetalleLocal[];
   }
 
   async markAsSynced(expediente_id: number): Promise<void> {
     await this.sqlite.execute(
-      'UPDATE expedientes_local SET synced = 1 WHERE expediente_id = ?',
+      'UPDATE expedientes_detalle_local SET synced = 1 WHERE expediente_id = ?',
       [expediente_id]
     );
   }
 
   async deleteExpediente(expediente_id: number): Promise<void> {
     await this.sqlite.execute(
-      'DELETE FROM expedientes_local WHERE expediente_id = ?',
-      [expediente_id]
-    );
-    await this.sqlite.execute(
-      'DELETE FROM comensales WHERE expediente_id = ?',
+      'DELETE FROM expedientes_detalle_local WHERE expediente_id = ?',
       [expediente_id]
     );
   }
 
   async clear(): Promise<void> {
-    const query = `DELETE FROM expedientes_detalle_local`;
-    await this.sqlite.execute(query);
+    await this.sqlite.execute('DELETE FROM expedientes_detalle_local');
   }
 }

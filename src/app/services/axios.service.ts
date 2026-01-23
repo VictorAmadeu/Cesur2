@@ -12,30 +12,26 @@ export class AxiosService {
 
   constructor(private router: Router) {
     this.axiosInstance = axios.create({
-      baseURL: environment.apiUrl, //'/api', // Usar proxy en desarrollo
+      baseURL: environment.apiUrl,
       timeout: 30000,
-      withCredentials: true, // <-- IMPORTANTE: envía cookies automáticamente
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json;charset=UTF-8',
-        'apiSecret': 'lPdXmvjVpSi8HQWEEeEtC8GFPWZWb6Kt',
+        apiSecret: environment.apiSecret,
       },
     });
 
-    // Interceptor para agregar token si existe
+    // Interceptor para agregar token si existe (sin imprimir headers)
     this.axiosInstance.interceptors.request.use(config => {
       const token = localStorage.getItem('access_token');
 
       if (token) {
-        // Agregamos el token al header
         config.headers!['Authorization'] = `Bearer ${token}`;
       }
-
-      console.log('Request Headers:', config.headers);
 
       return config;
     });
 
-    // Interceptor para manejar respuestas y errores
     this.axiosInstance.interceptors.response.use(
       response => response,
       error => {
@@ -46,11 +42,14 @@ export class AxiosService {
           response: error.response?.data,
         };
 
-        console.error('Error en respuesta:', JSON.stringify(axiosError));
+        // Log mínimo: sin payloads completos
+        console.error('Error en respuesta:', {
+          status: axiosError.status,
+          code: axiosError.code,
+          message: axiosError.message,
+        });
 
-        // Manejar token vencido o sesión inválida
         if (axiosError.status === 401) {
-          console.warn('Token expirado o no autorizado, redirigiendo a login...');
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           this.router.navigate(['/login']);

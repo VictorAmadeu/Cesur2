@@ -3,7 +3,7 @@ import { Network } from '@capacitor/network';
 import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NetworkService {
   private _isOnline = new BehaviorSubject<boolean>(true);
@@ -14,13 +14,16 @@ export class NetworkService {
   }
 
   async initNetworkListener() {
-    const status = await Network.getStatus();
-    this._isOnline.next(status.connected);
-
-    Network.addListener('networkStatusChange', (status) => {
-      console.log('[NETWORK] Estado de conexión:', status.connected ? 'ONLINE' : 'OFFLINE');
+    try {
+      const status = await Network.getStatus();
       this._isOnline.next(status.connected);
-    });
+
+      Network.addListener('networkStatusChange', statusChange => {
+        this._isOnline.next(statusChange.connected);
+      });
+    } catch (_err) {
+      console.error('[NetworkService] Error inicializando listener de red.');
+    }
   }
 
   get isOnline(): boolean {

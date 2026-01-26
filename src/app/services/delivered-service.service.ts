@@ -55,12 +55,14 @@ export class DeliveredService {
     expedienteId: number,
     metodo: 'NFC' | 'manual',
     motivo: string,
-    observacion: string
+    observacion: string,
+    qrCode?: string // Código opcional asociado a la entrega
   ) {
     const payload: EntregaLocal = {
       ruta_id: rutaId,
       expediente_id: expedienteId,
       metodo,
+      qrCode: qrCode?.trim() || undefined, // Normaliza vacío a undefined
       motivo,
       observacion,
       timestamp: Date.now(),

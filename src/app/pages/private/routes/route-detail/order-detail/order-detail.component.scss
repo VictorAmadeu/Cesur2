@@ -156,3 +156,16 @@ ion-fab .additional-buttons {
   justify-content: center;
   align-content: start;
 }
+
+/* Añadido: NFC destacado para diferenciarlo del QR (solo afecta al botón con class="fab-nfc") */
+.fab-nfc {
+  --background: #0f8a5f;
+  --background-hover: #11a16b;
+  --background-activated: #0b6e4a;
+  --color: #ffffff;
+  --box-shadow: 0 6px 16px rgba(15, 138, 95, 0.35);
+}
+
+.fab-nfc[disabled] {
+  opacity: 0.6;
+}

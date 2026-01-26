@@ -18,6 +18,9 @@ export interface Comensal {
   comidaEmergencia?: string;
   cumplesConAzucar?: string;
   cumplesSinAzucar?: string;
+
+  // Nuevo campo: ID del comensal (lo debe enviar el backend en el detalle del expediente)
+  comensal_id?: number | string;
 }
 
 export interface ExpedienteDetalleLocal {

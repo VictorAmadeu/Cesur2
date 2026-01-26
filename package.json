@@ -1,5 +1,5 @@
 {
-  "name": "App-rutas",
+  "name": "app-rutas",
   "version": "0.0.1",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
@@ -36,6 +36,7 @@
     "@capacitor/network": "^7.0.2",
     "@capacitor/preferences": "^7.0.1",
     "@capacitor/status-bar": "^7.0.1",
+    "@exxili/capacitor-nfc": "^0.0.11",
     "@ionic/angular": "^8.7.7",
     "axios": "^1.11.0",
     "capacitor-pdf-viewer": "^0.0.2",

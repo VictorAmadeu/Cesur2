@@ -13,7 +13,6 @@ import {
 } from '@ionic/angular/standalone';
 import { LoadingComponent } from 'src/app/components/loading/loading.component';
 import { ToastService } from 'src/app/services/toast.service';
-import { CryptoService } from 'src/app/services/crypto.service';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { Capacitor } from '@capacitor/core';
 import { ModalController } from '@ionic/angular';
@@ -24,12 +23,11 @@ import { ModalFileComponent } from 'src/app/components/modal-file/modal-file.com
 import { DateService } from 'src/app/services/dale.service';
 import { Network } from '@capacitor/network';
 import { UrgenciasRepository } from 'src/app/services/database-movil/repositories/urgencias_local.repository';
-import { EntregasRepository } from 'src/app/services/database-movil/repositories/entregas_local.repository';
 import { DeliveredService } from 'src/app/services/delivered-service.service';
 import { RouteHeaderService } from 'src/app/services/route-header.service';
-import { RoutesService } from 'src/app/services/routes.service';
 import { AppLauncher } from '@capacitor/app-launcher';
 import { register } from 'swiper/element/bundle';
+import { NfcService } from 'src/app/services/nfc.service';
 
 register();
 
@@ -55,18 +53,48 @@ register();
 export class OrderDetailComponent implements OnInit {
   routeId!: string;
   routeData: any;
-  loading: Boolean = true;
+  loading: boolean = true;
   orderId: string = '';
-  isDelivered: Boolean = false;
+  isDelivered: boolean = false;
   resultQr: string | null = null;
   fabOpen = false;
+
   qrSupported = false;
+  nfcSupported = false;
+  nfcBusy = false;
+
+  private pendingQrCode: string | null = null;
+
+  private readonly QR_PARAM_KEYS = [
+    'expediente',
+    'expedienteId',
+    'expediente_id',
+    'id',
+    'codigo',
+    'codigoExpediente',
+    // claves de comensal en QR (query / JSON)
+    'comensal',
+    'comensalId',
+    'comensal_id',
+    'idComensal',
+    'codigoComensal',
+  ];
+
+  // Posibles claves de comensal dentro de routeData.comensales[]
+  private readonly COMENSAL_FIELD_KEYS = [
+    'comensal_id',
+    'comensalId',
+    'idComensal',
+    'codigoComensal',
+    'comensal',
+    'id',
+  ];
 
   /**
-   * isEmergency NO es solo un icono: también controla la lógica del documento en el FAB
+   * isEmergency NO es solo un icono: controla la lógica del documento en el FAB
    * (y la validación antes de entregar). Se calcula SOLO desde comidaEmergencia.
    */
-  isEmergency: Boolean = false;
+  isEmergency: boolean = false;
 
   /**
    * Icono del encabezado (UI) con prioridad y regla:
@@ -93,20 +121,19 @@ export class OrderDetailComponent implements OnInit {
   constructor(
     private modalController: ModalController,
     private route: ActivatedRoute,
-    private routesService: RoutesService,
     private headerService: RouteHeaderService,
     private toastService: ToastService,
-    private entregasRepository: EntregasRepository,
-    private cryptoService: CryptoService,
     private dateService: DateService,
     private urgenciasRepository: UrgenciasRepository,
-    private deliveredService: DeliveredService
+    private deliveredService: DeliveredService,
+    private nfcService: NfcService
   ) {}
 
   async ngOnInit() {
     this.orderId = this.route.snapshot.paramMap.get('expediente')!;
     this.routeId = this.route.snapshot.paramMap.get('id')!;
     this.qrSupported = await this.checkQrSupport();
+    this.nfcSupported = await this.nfcService.isSupported();
   }
 
   ionViewWillEnter() {
@@ -184,7 +211,13 @@ export class OrderDetailComponent implements OnInit {
     return null;
   }
 
-  async delivered(expedienteId: string, motivo?: string, observaciones?: string) {
+  async delivered(
+    expedienteId: string,
+    motivo?: string,
+    observaciones?: string,
+    metodo: 'NFC' | 'manual' = 'manual',
+    qrCode?: string
+  ) {
     try {
       if (!expedienteId || !motivo || !observaciones) {
         this.toastService.show('Completar todos los campos antes de realizar la entrega.', 'danger');
@@ -203,9 +236,10 @@ export class OrderDetailComponent implements OnInit {
       const req = await this.deliveredService.addDelivered(
         Number(this.routeId),
         Number(expedienteId),
-        'manual',
+        metodo,
         motivo,
-        observaciones
+        observaciones,
+        qrCode
       );
 
       if (req.status === 'ok') {
@@ -222,6 +256,8 @@ export class OrderDetailComponent implements OnInit {
 
   async onClickQr() {
     try {
+      this.pendingQrCode = null;
+
       if (!this.qrSupported) {
         this.toastService.show('Escaneo QR no disponible en este dispositivo.', 'warning');
         return;
@@ -235,26 +271,76 @@ export class OrderDetailComponent implements OnInit {
 
       const result = await BarcodeScanner.scan();
 
-      if (result.barcodes.length > 0) {
-        const value = result.barcodes[0].rawValue ?? '';
-        this.resultQr = value;
-
-        const id = value.split('/').pop()?.trim();
-        if (!id) {
-          this.toastService.show('QR inválido.', 'danger');
-          return;
-        }
-
-        const req = await this.routesService.checkOrderByQr(id);
-        const decrypted = await this.cryptoService.decryptData(req.data.data);
-        JSON.parse(decrypted); // Validación de formato sin loguear contenido
-
-        this.toastService.show('QR escaneado con éxito.', 'success');
-      } else {
+      if (result.barcodes.length === 0) {
         this.toastService.show('No se detectó ningún QR.', 'danger');
+        return;
       }
+
+      const rawValue = (result.barcodes[0].rawValue ?? '').trim();
+      if (!rawValue) {
+        this.toastService.show('QR inválido.', 'danger');
+        return;
+      }
+
+      if (!this.routeData?.expediente_id) {
+        this.toastService.show('No hay expediente cargado para validar el QR.', 'warning');
+        return;
+      }
+
+      const tokens = this.extractQrTokens(rawValue);
+      if (!this.tokensMatchCurrentOrder(tokens)) {
+        this.toastService.show('QR no corresponde a este expediente.', 'danger');
+        return;
+      }
+
+      this.resultQr = rawValue;
+      this.pendingQrCode = rawValue;
+
+      this.toastService.show('Lectura correcta. Completa el motivo para entregar.', 'success');
+      await this.openModalQr();
     } catch (err) {
       this.toastService.show('Error al escanear.', 'danger');
+    }
+  }
+
+  async onClickNfc() {
+    if (!this.nfcSupported) {
+      this.toastService.show('NFC no disponible en este dispositivo.', 'warning');
+      return;
+    }
+
+    if (this.nfcBusy) {
+      this.toastService.show('Lectura NFC en curso.', 'warning');
+      return;
+    }
+
+    if (!this.routeData?.expediente_id) {
+      this.toastService.show('No hay expediente cargado para validar NFC.', 'warning');
+      return;
+    }
+
+    this.pendingQrCode = null;
+    this.nfcBusy = true;
+
+    try {
+      const payload = await this.nfcService.readOnce(20000);
+
+      const tokens = this.extractQrTokens(payload);
+      if (!this.tokensMatchCurrentOrder(tokens)) {
+        this.toastService.show('NFC no corresponde a este expediente.', 'danger');
+        return;
+      }
+
+      this.resultQr = payload;
+      this.pendingQrCode = payload;
+
+      this.toastService.show('Lectura NFC correcta. Completa el motivo para entregar.', 'success');
+      await this.openModalQr();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al leer NFC.';
+      this.toastService.show(message, 'danger');
+    } finally {
+      this.nfcBusy = false;
     }
   }
 
@@ -292,13 +378,152 @@ export class OrderDetailComponent implements OnInit {
     }
   }
 
+  private normalizeQrToken(value: string): string {
+    return value.trim().toUpperCase();
+  }
+
+  private cleanQrToken(value: string): string {
+    return value.replace(/^[^A-Za-z0-9_-]+|[^A-Za-z0-9_-]+$/g, '').trim();
+  }
+
+  private safeDecodeURIComponent(value: string): string {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  private extractTokensFromJson(value: unknown, addToken: (value: unknown) => void): void {
+    if (value === null || value === undefined) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(item => this.extractTokensFromJson(item, addToken));
+      return;
+    }
+
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      for (const key of this.QR_PARAM_KEYS) {
+        if (key in obj) {
+          this.extractTokensFromJson(obj[key], addToken);
+        }
+      }
+      return;
+    }
+
+    addToken(value);
+  }
+
+  private extractQrTokens(rawValue: string): string[] {
+    const raw = (rawValue ?? '').trim();
+    if (!raw) return [];
+
+    const tokens = new Set<string>();
+    const addToken = (value: unknown) => {
+      if (value === null || value === undefined) return;
+      const str = this.cleanQrToken(String(value));
+      if (str) tokens.add(str);
+    };
+
+    const decoded = this.safeDecodeURIComponent(raw);
+    const candidates = decoded !== raw ? [raw, decoded] : [raw];
+
+    for (const candidate of candidates) {
+      // JSON
+      if (candidate.startsWith('{') || candidate.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(candidate);
+          this.extractTokensFromJson(parsed, addToken);
+        } catch {
+          // ignorar JSON inválido
+        }
+      }
+
+      // URL
+      if (candidate.includes('://')) {
+        try {
+          const url = new URL(candidate);
+          url.pathname.split('/').forEach(segment => addToken(segment));
+          for (const key of this.QR_PARAM_KEYS) {
+            const value = url.searchParams.get(key);
+            if (value) addToken(value);
+          }
+        } catch {
+          // ignorar URLs inválidas
+        }
+      }
+
+      // separador genérico
+      candidate.split(/[\/?#&=:\s]+/).forEach(part => addToken(part));
+    }
+
+    return Array.from(tokens);
+  }
+
+  private getExpectedQrTokens(): string[] {
+    const tokens: string[] = [];
+
+    if (this.routeData?.expediente) {
+      tokens.push(String(this.routeData.expediente));
+    }
+
+    if (this.routeData?.expediente_id !== undefined && this.routeData?.expediente_id !== null) {
+      tokens.push(String(this.routeData.expediente_id));
+    }
+
+    if (this.orderId) {
+      tokens.push(String(this.orderId));
+    }
+
+    return tokens.map(token => token.trim()).filter(Boolean);
+  }
+
+  private getExpectedComensalTokens(): string[] {
+    const comensales = this.routeData?.comensales ?? [];
+    const tokens: string[] = [];
+
+    for (const item of comensales) {
+      if (!item || typeof item !== 'object') continue;
+      const comensal = item as Record<string, unknown>;
+
+      for (const key of this.COMENSAL_FIELD_KEYS) {
+        if (key in comensal) {
+          const value = comensal[key];
+          if (value !== null && value !== undefined && String(value).trim() !== '') {
+            tokens.push(String(value));
+          }
+        }
+      }
+    }
+
+    return tokens.map(token => token.trim()).filter(Boolean);
+  }
+
+  private hasTokenMatch(tokens: string[], expectedTokens: string[]): boolean {
+    if (!tokens.length || !expectedTokens.length) return false;
+    const expectedSet = new Set(expectedTokens.map(t => this.normalizeQrToken(t)));
+    return tokens.some(token => expectedSet.has(this.normalizeQrToken(token)));
+  }
+
+  private tokensMatchCurrentOrder(tokens: string[]): boolean {
+    if (this.hasTokenMatch(tokens, this.getExpectedQrTokens())) return true;
+
+    const comensalTokens = this.getExpectedComensalTokens();
+    return this.hasTokenMatch(tokens, comensalTokens);
+  }
+
   async checkDocument() {
-    // Si no hay fila (0 resultados), Boolean(undefined) => false (estado explícito)
     const urgencia = await this.urgenciasRepository.getUrgenciaById(Number(this.routeData.expediente_id));
     this.documentDevlivered = Boolean(urgencia?.firmado);
   }
 
   async openModal() {
+    if (!this.routeData?.expediente_id) {
+      this.toastService.show('No hay expediente cargado.', 'warning');
+      return;
+    }
+
     const modal = await this.modalController.create({
       component: ModalDeliveryComponent,
       backdropDismiss: false,
@@ -312,9 +537,43 @@ export class OrderDetailComponent implements OnInit {
     const { data, role } = await modal.onWillDismiss();
 
     if (role === 'confirm') {
-      await this.delivered(this.routeData.expediente_id, data.motivo, data.observaciones);
+      await this.delivered(this.routeData.expediente_id, data?.motivo, data?.observaciones);
     }
 
+    await this.loadRouteDetail();
+  }
+
+  async openModalQr() {
+    if (!this.routeData?.expediente_id) {
+      this.toastService.show('No hay expediente cargado.', 'warning');
+      return;
+    }
+
+    const modal = await this.modalController.create({
+      component: ModalDeliveryComponent,
+      backdropDismiss: false,
+      componentProps: {
+        expedienteId: this.routeData.expediente_id,
+        expedienteReadonly: true,
+        title: 'Entrega por QR/NFC',
+      },
+    });
+
+    await modal.present();
+
+    const { data, role } = await modal.onWillDismiss();
+
+    if (role === 'confirm') {
+      await this.delivered(
+        this.routeData.expediente_id,
+        data?.motivo,
+        data?.observaciones,
+        'NFC',
+        this.pendingQrCode ?? undefined
+      );
+    }
+
+    this.pendingQrCode = null;
     await this.loadRouteDetail();
   }
 

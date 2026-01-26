@@ -44,6 +44,12 @@ import { FormsModule } from '@angular/forms';
 export class ModalDeliveryComponent implements OnInit {
   @Input() expedienteId!: string;
 
+  // Permite personalizar el título desde el componente llamante (p. ej., entrega manual vs QR/NFC).
+  @Input() title: string = 'Entrega expediente sin QR';
+
+  // Permite bloquear el campo del expediente cuando la entrega viene validada por QR/NFC.
+  @Input() expedienteReadonly: boolean = false;
+
   observaciones: string = '';
   motivos: Array<{ motivo_id: string; motivo: string }> = [];
   selectedMotivo: string = '';

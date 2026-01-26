@@ -198,8 +198,20 @@
         </ion-fab-button>
 
         @if (qrSupported) {
-          <ion-fab-button (click)="onClickQr()">
+          <ion-fab-button (click)="onClickQr()" title="Entrega por QR" aria-label="Entrega por QR">
             <ion-icon name="qr-code-outline"></ion-icon>
+          </ion-fab-button>
+        }
+
+        @if (nfcSupported) {
+          <ion-fab-button
+            class="fab-nfc"
+            (click)="onClickNfc()"
+            [disabled]="nfcBusy"
+            title="Entrega por NFC"
+            aria-label="Entrega por NFC"
+          >
+            <ion-icon name="scan-outline"></ion-icon>
           </ion-fab-button>
         }
       </ion-fab>

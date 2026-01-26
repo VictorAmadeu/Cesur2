@@ -1,7 +1,7 @@
 <ion-header>
   <ion-toolbar>
     <ion-title>
-      Entrega expediente sin QR
+      {{ title }}
     </ion-title>
     <ion-button fill="clear" color="dark" size="large" slot="end" (click)="cancel()">
       <ion-icon name="close-outline"></ion-icon>
@@ -13,7 +13,12 @@
 
   <ion-item>
     <ion-label position="stacked">Código de Expediente</ion-label>
-    <ion-input [(ngModel)]="expedienteId" name="expedienteId" placeholder="Ingrese el código">
+    <ion-input
+      [(ngModel)]="expedienteId"
+      name="expedienteId"
+      placeholder="Ingrese el código"
+      [readonly]="expedienteReadonly"
+    >
     </ion-input>
   </ion-item>
 

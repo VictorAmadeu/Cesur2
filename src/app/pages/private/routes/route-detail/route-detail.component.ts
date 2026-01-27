@@ -57,6 +57,7 @@ export class RouteDetailComponent implements OnInit {
       const soloPendientes: 'S' | 'N' = 'N';
       const response = await this.routesService.getDetailRoute(dateApi, this.routeId, soloPendientes);
       const decrypted = await this.cryptoService.decryptData(response.data.data);
+
       const cachedAt = Date.now();
 
       const expedientesLocal = (JSON.parse(decrypted) as ExpedienteLocal[]).map(r => ({

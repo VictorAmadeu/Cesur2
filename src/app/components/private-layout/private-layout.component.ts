@@ -24,6 +24,7 @@ export class PrivateLayoutComponent implements OnInit {
 
   // Evitamos fecha fija: se inicializa desde el servicio
   date: string = '';
+
   logoutButton: boolean = true;
 
   constructor(

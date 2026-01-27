@@ -7,6 +7,7 @@ export interface ExpedienteLocal {
   comidas: number;
   cenas: number;
   cachedAt: number;
+  notasReparto?: string;
 }
 
 export interface ExpedienteApi {
@@ -16,4 +17,5 @@ export interface ExpedienteApi {
   comidas: number;
   orden: number;
   cenas: number;
+  notasReparto?: string;
 }

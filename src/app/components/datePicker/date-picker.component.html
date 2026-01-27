@@ -11,7 +11,8 @@
 
 <ion-modal #modal [keepContentsMounted]="true">
   <ng-template>
-    <ion-datetime id="datetime" presentation="date" [formatOptions]="{
+    <!-- Semana comienza en lunes -->
+    <ion-datetime id="datetime" presentation="date" [firstDayOfWeek]="1" [formatOptions]="{
         date: {
           weekday: 'short',
           month: 'long',

@@ -99,6 +99,7 @@ export class SqliteService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ruta_id INTEGER,
         expediente_id INTEGER,
+        fecha TEXT,
         metodo TEXT,
         qrCode TEXT,
         motivo TEXT,
@@ -107,6 +108,23 @@ export class SqliteService {
         synced INTEGER DEFAULT 0
       );
     `);
+
+    // Garantiza compatibilidad con BDs antiguas (si la tabla ya existía sin columna fecha).
+    await this.ensureEntregasFechaColumn();
+  }
+
+  private async ensureEntregasFechaColumn(): Promise<void> {
+    const columns = await this.query('PRAGMA table_info(entregas_local)');
+    const hasFecha = (columns || []).some((column: any) => column.name === 'fecha');
+
+    if (!hasFecha) {
+      await this.execute('ALTER TABLE entregas_local ADD COLUMN fecha TEXT');
+    }
+
+    // Rellena fecha para filas antiguas a partir del timestamp (en hora local).
+    await this.execute(
+      "UPDATE entregas_local SET fecha = date(timestamp / 1000, 'unixepoch', 'localtime') WHERE fecha IS NULL"
+    );
   }
 
   get connection(): SQLiteDBConnection {

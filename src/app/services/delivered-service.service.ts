@@ -6,6 +6,7 @@ import { RoutesService } from './routes.service';
 import { CryptoService } from './crypto.service';
 import { ExpedienteDetalleLocal } from '../types/expedientes_detalle_local.type';
 import { ExpedientesRepository } from './database-movil/repositories/expedientes_detalle_local.repository';
+import { DateService } from './dale.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,32 +17,37 @@ export class DeliveredService {
     private network: NetworkService,
     private routeService: RoutesService,
     private crypto: CryptoService,
-    private expedientesRepository: ExpedientesRepository
+    private expedientesRepository: ExpedientesRepository,
+    private dateService: DateService
   ) {}
+
+  private getSelectedDate(): string {
+    return this.dateService.getDate();
+  }
 
   async getDeliveredOrders(expediente_id: number): Promise<number[]> {
     const deliveredIds: number[] = [];
-    const entrega = await this.entregasRepository.getEntregaById(expediente_id);
+    const entrega = await this.entregasRepository.getEntregaById(expediente_id, this.getSelectedDate());
     if (entrega) deliveredIds.push(expediente_id);
     return deliveredIds;
   }
 
   async getDeliveredRoutes(ruta_id: number): Promise<number[]> {
     const deliveredIds: number[] = [];
-    const entrega = await this.entregasRepository.getEntregaByRoutes(ruta_id);
+    const entrega = await this.entregasRepository.getEntregaByRoutes(ruta_id, this.getSelectedDate());
     if (entrega) deliveredIds.push(ruta_id);
     return deliveredIds;
   }
 
   // Devuelve IDs de rutas con entregas locales (consulta bulk) y sin duplicados.
   async getDeliveredRouteIds(): Promise<number[]> {
-    const ids = await this.entregasRepository.getRutaIdsWithEntregas();
+    const ids = await this.entregasRepository.getRutaIdsWithEntregas(this.getSelectedDate());
     return Array.from(new Set(ids));
   }
 
   // Devuelve IDs de expedientes entregados para una ruta (consulta bulk) y sin duplicados.
   async getDeliveredOrderIdsByRuta(ruta_id: number): Promise<number[]> {
-    const ids = await this.entregasRepository.getExpedienteIdsByRuta(ruta_id);
+    const ids = await this.entregasRepository.getExpedienteIdsByRuta(ruta_id, this.getSelectedDate());
     return Array.from(new Set(ids));
   }
 
@@ -56,13 +62,16 @@ export class DeliveredService {
     metodo: 'NFC' | 'manual',
     motivo: string,
     observacion: string,
-    qrCode?: string // Código opcional asociado a la entrega
+    qrCode?: string
   ) {
+    const selectedDate = this.getSelectedDate();
+
     const payload: EntregaLocal = {
       ruta_id: rutaId,
       expediente_id: expedienteId,
+      fecha: selectedDate,
       metodo,
-      qrCode: qrCode?.trim() || undefined, // Normaliza vacío a undefined
+      qrCode: qrCode?.trim() || undefined,
       motivo,
       observacion,
       timestamp: Date.now(),
@@ -81,7 +90,7 @@ export class DeliveredService {
       const data = JSON.parse(decrypted);
 
       if (data.status === 'OK') {
-        await this.entregasRepository.markAsSynced(expedienteId);
+        await this.entregasRepository.markAsSynced(expedienteId, selectedDate);
         return { status: 'ok', message: 'Documento enviado correctamente.' };
       } else {
         console.error('[DeliveredService] Error en respuesta API.');

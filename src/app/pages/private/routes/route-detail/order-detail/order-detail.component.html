@@ -65,8 +65,9 @@
 
                       <div class="comensal-grid">
                         <dl>
-                          <dt>Dieta</dt>
-                          <dd>{{ persona.dieta }}</dd>
+                          <dt>Dieta</dt>  <!--Cambio color según dieta - testeando -->
+                          <dd [ngClass]="{'dieta-especial': persona.dieta !== 'NORMAL'}">
+                          {{ persona.dieta }} </dd>
 
                           <dt>Cenas</dt>
                           <dd>{{ persona.cenas }}</dd>

@@ -48,12 +48,12 @@ export class RoutesComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    this.dateSub?.unsubscribe();
-  }
-
   ionViewWillEnter() {
     this.loadRouteDetail();
+  }
+
+  ngOnDestroy() {
+    this.dateSub?.unsubscribe();
   }
 
   async loadRouteDetail() {
@@ -91,7 +91,7 @@ export class RoutesComponent implements OnInit, OnDestroy {
 
   onClick(routeName: string, id: string) {
     this.headerService.setHeader(routeName);
-    this.headerService.setSubtitle(this.date);
+    this.headerService.setSubtitle(this.dateService.getDate());  // ← Obtiene la fecha actual del servicio
     this.router.navigate(['/privado/rutas', id]);
   }
 }
